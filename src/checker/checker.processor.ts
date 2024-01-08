@@ -12,14 +12,14 @@ export class CheckerProcesspr {
   constructor(private websocketGatway: WebsocketGateway) { }
   @Process({
     name: 'CHECK_PROXY',
-    concurrency: 50,
+    concurrency: 250,
   })
   async scrapLink(job: Job<any>) {
     console.log(job.data)
     return await this.httpChecker(job.data.proxy, job.data.isLast);
   }
 
-  async httpChecker(proxy:string,isLast:boolean) {
+  async httpChecker(proxy: string, isLast: boolean) {
     const httpAgent = new HttpProxyAgent(`http://${proxy}`);
     const startTime: any = new Date();
 
@@ -34,13 +34,16 @@ export class CheckerProcesspr {
         let geo = await lookup(proxy.split(':')[0])
         let proxyData = {
           proxy,
-          status: 'LIVE',
-          latency: `${latency} ms`,
-          type: res.data.headers['X-Forwarded-Proto'],
-          geo: { ...geo }
+          data: {
+            status: 'LIVE',
+            latency: `${latency} ms`,
+            type: res.data.headers['X-Forwarded-Proto'],
+            geo: { ...geo }
+          }
+
         }
         this.websocketGatway.handleMessage(proxyData)
-        if(isLast){
+        if (isLast) {
           this.websocketGatway.handleMessage({
             status: 'DONE',
           })
@@ -49,27 +52,31 @@ export class CheckerProcesspr {
       }
       this.websocketGatway.handleMessage({
         proxy,
-        status: 'DEAD',
+        data : {
+          status: 'DEAD',
+        }
       })
-      if(isLast){
+      if (isLast) {
         this.websocketGatway.handleMessage({
           status: 'DONE',
         })
       }
-      return { proxy,status: 'DEAD' };
+      return { proxy, status: 'DEAD' };
     } catch (error) {
       this.websocketGatway.handleMessage({
         proxy,
-        status: 'DEAD',
+        data : {
+          status: 'DEAD',
+        }
       })
-      if(isLast){
+      if (isLast) {
         this.websocketGatway.handleMessage({
           status: 'DONE',
         })
       }
-      return { proxy,status: 'DEAD' };
+      return { proxy, status: 'DEAD' };
     }
-    
+
   }
 
 }

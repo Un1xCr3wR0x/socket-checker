@@ -1,20 +1,30 @@
-# Base image
-FROM node:18
+FROM node:16
 
-# Create app directory
-WORKDIR /usr/src/app
+# Set working directory
+WORKDIR /app
 
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install app dependencies
+# Install dependencies
 RUN npm install
 
-# Bundle app source
+# Copy the rest of the application files
 COPY . .
 
-# Creates a "dist" folder with the production build
-RUN npm run build
+# Expose the application port
+EXPOSE 2000
 
-# Start the server using the production build
-CMD [ "node", "dist/main.js" ]
+# Install Redis server
+RUN apt-get update && \
+    apt-get install -y redis-server && \
+    rm -rf /var/lib/apt/lists/*
+
+# Configure Redis to listen on port 6377 without a password
+RUN sed -i 's/^bind .*$/bind 0.0.0.0/' /etc/redis/redis.conf && \
+    sed -i 's/^protected-mode yes$/protected-mode no/' /etc/redis/redis.conf && \
+    sed -i 's/^port 6379$/port 6377/' /etc/redis/redis.conf && \
+    sed -i '/^requirepass/ s/^/#/' /etc/redis/redis.conf
+
+# Start Redis server and then the Node.js application
+CMD ["bash", "-c", "redis-server --daemonize yes && npm start"]

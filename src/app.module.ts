@@ -9,7 +9,7 @@ import { WebsocketGateway } from './websocket-gateway/websocket.gateway';
     CheckerModule, 
     BullModule.forRoot({
     redis: {
-      host: '127.0.0.1',
+      host: '146.235.208.110',
       port: 6377,
       password: "RedisAuth"
     },
